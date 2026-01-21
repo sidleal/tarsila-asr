@@ -3,6 +3,12 @@ from tqdm.auto import tqdm
 import csv
 import re
 import os
+from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
+import torch
+from fairseq2.assets import AssetCard
+
+device = "cuda:0" if torch.cuda.is_available() else "cpu"
+torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
 alphabet = r"ABCDEFGHIJKLMNOPQRSTUVWXYZÇÃÀÁÂÊÉÍÓÔÕÚÛabcdefghijklmnopqrstuvwxyzçãàáâêéíóôõũúû1234567890%\-\n/\\ "
 
@@ -44,17 +50,99 @@ def replace_special_tokens_and_normalize(text):
 def save_index_file(index_file, dataset):
     exists = os.path.isfile(index_file)
     if not exists:
-        with open(index_file, mode="w", encoding="utf-8") as f:
-            f.write("idx\torigin\tduration\tgender\tref\tref_norm\n")
+        with open(index_file, mode="w", encoding="utf-8", newline='') as f:
+            writer = csv.writer(f, delimiter=',')
+            writer.writerow(["idx", "origin", "duration", "gender", "ref", "ref_norm"])
+            
             for i in tqdm(range(len(dataset))):
-                origin = dataset[i]['origin']
-                duration = dataset[i]['duration']
-                gender = dataset[i]['gender']
-                ref = dataset[i]['text']
+                ref = dataset[i]['text'].replace('\n', ' ')
                 ref_norm = replace_special_tokens_and_normalize(ref)
+                
+                writer.writerow([
+                    i, 
+                    dataset[i]['origin'], 
+                    dataset[i]['duration'], 
+                    dataset[i]['gender'], 
+                    ref, 
+                    ref_norm
+                ])
 
-                f.write(f"{i}\t{origin}\t{duration}\t{gender}\t{ref}\t{ref_norm}\n")
+def eval_whisper_based(model_id, dataset):
+    print(f"eval whisper based model: {model_id}...")
+    model_csv_file = f"{model_id}".replace("/", "__")
+    exists = os.path.isfile(model_csv_file)
+    if exists:
+        print("skipping...")
+        return
 
+    model = AutoModelForSpeechSeq2Seq.from_pretrained(
+        model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True, use_safetensors=True
+    )
+    model.to(device)
+
+    processor = AutoProcessor.from_pretrained(model_id)
+
+    pipe = pipeline(
+        "automatic-speech-recognition",
+        model=model,
+        tokenizer=processor.tokenizer,
+        feature_extractor=processor.feature_extractor,
+        max_new_tokens=128,
+        dtype=torch_dtype,
+        device=device,
+    )
+
+    with open(model_csv_file, mode="w", encoding="utf-8", newline='') as fm:
+        writer = csv.writer(fm)
+        writer.writerow(["idx", "out", "out_norm"])
+
+        start_event = torch.cuda.Event(enable_timing=True)
+        end_event = torch.cuda.Event(enable_timing=True)
+        
+        for i in tqdm(range(len(dataset))):
+            try:
+                start_event.record()
+                out = pipe(dataset[i]["audio"])
+                end_event.record()
+
+                torch.cuda.synchronize()
+                time_in_ms = start_event.elapsed_time(end_event)
+
+                out_text = out['text']
+                out_norm = replace_special_tokens_and_normalize(out_text)
+                writer.writerow([
+                    i,
+                    out_text,
+                    out_norm,
+                    round(time_in_ms, 2)
+                ])
+            except Exception as e:
+                print(f"Skipping index {i} due to error: {e}")
+                writer.writerow([
+                    i, 
+                    "error", 
+                    "error",
+                    -1
+                ])
+            break #=====================================
+    return
+
+
+def eval_omni_based(model_id, dataset):
+    print(f"eval whisper based model: {model_id}...")
+    model_csv_file = f"{model_id}".replace("/", "__")
+    exists = os.path.isfile(model_csv_file)
+    if exists:
+        print("skipping...")
+        return
+
+    model_300M_4k = AssetCard("omniASR_LLM_300M_Tarsila_4k", {
+        "model_family": "wav2vec2_llama",  
+        "model_arch": "300m",   
+        "checkpoint": "file:///home/jovyan/omnilingual-asr/output/ws_1.96866555/checkpoints/step_4000/model/pp_00/tp_00/sdp_00.pt",
+        "tokenizer": "https://dl.fbaipublicfiles.com/mms/omniASR_tokenizer.model",
+        "tokenizer_family": "char_tokenizer",
+    })
 
 def eval():
     print("loading dataset...")
@@ -66,12 +154,31 @@ def eval():
     index_file = "tarsila-asr-index.csv"
     save_index_file(index_file, dataset)
 
+    eval_whisper_based("sidleal/distil-whisper-coraa-mupe-asr-2", dataset)
+    eval_whisper_based("sidleal/distil-whisper-tarsila-asr-v1-200k", dataset)
+    eval_whisper_based("sidleal/distil-whisper-tarsila-asr-v1-750k", dataset)
+    
+    eval_whisper_based("openai/whisper-medium", dataset)
+    eval_whisper_based("openai/whisper-large-v3", dataset)
 
-    with open(index_file, 'r') as f:
-        reader = csv.reader(f, delimiter='\t')
-        for row in reader:
-            print(row)
+    eval_whisper_based("sidleal/whisper-tarsila-asr-medium-v1-100k", dataset)
+    eval_whisper_based("sidleal/whisper-tarsila-asr-medium-v1-350k", dataset)
+    eval_whisper_based("sidleal/whisper-tarsila-asr-large3-v1-75k", dataset)
+    eval_whisper_based("sidleal/whisper-tarsila-asr-large3-v1-450k", dataset)
 
+    # i = 0
+    # with open(index_file, 'r') as f:
+    #     reader = csv.DictReader(f)
+    #     for row in reader:
+    #         print(row['ref'])
+    #         print(dataset[i]['text'])
+    #         print('-')
+    #         original = dataset[i]['text'].replace('\n', ' ')
+    #         ref = row['ref']
+    #         if ref != original:
+    #             print(i, row['origin'])
+    #             break
+    #         i+=1
     
 
 

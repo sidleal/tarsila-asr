@@ -8,4 +8,5 @@ dependencies = [
     "datasets>=4.5.0",
     "torch>=2.9.1",
     "torchcodec>=0.9.1",
+    "transformers>=4.57.6",
 ]

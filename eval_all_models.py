@@ -98,7 +98,7 @@ def eval_whisper_based(model_id, dataset):
 
     with open(model_csv_file, mode="w", encoding="utf-8", newline='') as fm:
         writer = csv.writer(fm)
-        writer.writerow(["idx", "out", "out_norm"])
+        writer.writerow(["idx", "out", "out_norm", "time_in_ms"])
 
         start_event = torch.cuda.Event(enable_timing=True)
         end_event = torch.cuda.Event(enable_timing=True)
@@ -149,7 +149,74 @@ def eval_omni_based(model_id, dataset):
             "tokenizer": "https://dl.fbaipublicfiles.com/mms/omniASR_tokenizer.model",
             "tokenizer_family": "char_tokenizer",
         })
-    
+
+    elif model_id == "sidleal/omniASR_LLM_300M_Tarsila_9k":
+        model_card = AssetCard("omniASR_LLM_300M_Tarsila_9k", {
+            "model_family": "wav2vec2_llama", 
+            "model_arch": "300m",   
+            "checkpoint": "https://huggingface.co/sidleal/omniASR_LLM_300M_Tarsila_9k/resolve/main/sdp_00.pt?download=true",
+            "tokenizer": "https://dl.fbaipublicfiles.com/mms/omniASR_tokenizer.model",
+            "tokenizer_family": "char_tokenizer",
+        })
+
+    elif model_id == "sidleal/omniASR_LLM_1B_Tarsila_4k":
+        model_card = AssetCard("omniASR_LLM_1B_Tarsila_4k", {
+            "model_family": "wav2vec2_llama", 
+            "model_arch": "1b",   
+            "checkpoint": "https://huggingface.co/sidleal/omniASR_LLM_1B_Tarsila_4k/resolve/main/sdp_00.pt?download=true",
+            "tokenizer": "https://dl.fbaipublicfiles.com/mms/omniASR_tokenizer.model",
+            "tokenizer_family": "char_tokenizer",
+        })
+
+    elif model_id == "sidleal/omniASR_LLM_1B_Tarsila_9k":
+        model_card = AssetCard("omniASR_LLM_1B_Tarsila_9k", {
+            "model_family": "wav2vec2_llama", 
+            "model_arch": "1b",   
+            "checkpoint": "https://huggingface.co/sidleal/omniASR_LLM_1B_Tarsila_9k/resolve/main/sdp_00.pt?download=true",
+            "tokenizer": "https://dl.fbaipublicfiles.com/mms/omniASR_tokenizer.model",
+            "tokenizer_family": "char_tokenizer",
+        })
+
+    elif model_id == "sidleal/omniASR_LLM_1B_Tarsila_15k":
+        model_card = AssetCard("omniASR_LLM_1B_Tarsila_15k", {
+            "model_family": "wav2vec2_llama", 
+            "model_arch": "1b",   
+            "checkpoint": "https://huggingface.co/sidleal/omniASR_LLM_1B_Tarsila_15k/resolve/main/sdp_00.pt?download=true",
+            "tokenizer": "https://dl.fbaipublicfiles.com/mms/omniASR_tokenizer.model",
+            "tokenizer_family": "char_tokenizer",
+        })
+
+    elif model_id == "facebookresearch/omniASR_LLM_7B":
+        model_card = AssetCard("omniASR_LLM_7B", {
+            "model_family": "wav2vec2_llama", 
+            "model_arch": "7b_v1_variant7",   
+            "checkpoint": "https://dl.fbaipublicfiles.com/mms/omniASR-LLM-7B.pt",
+            "tokenizer": "https://dl.fbaipublicfiles.com/mms/omniASR_tokenizer_v7.model",
+            "tokenizer_family": "char_tokenizer",
+        })
+
+    elif model_id == "facebookresearch/omniASR_LLM_1B":
+        model_card = AssetCard("omniASR_LLM_1B", {
+            "model_family": "wav2vec2_llama", 
+            "model_arch": "1b",   
+            "checkpoint": "https://dl.fbaipublicfiles.com/mms/omniASR-LLM-1B.pt",
+            "tokenizer": "https://dl.fbaipublicfiles.com/mms/omniASR_tokenizer.model",
+            "tokenizer_family": "char_tokenizer",
+        })
+
+    elif model_id == "facebookresearch/omniASR_LLM_300M":
+        model_card = AssetCard("omniASR_LLM_300M", {
+            "model_family": "wav2vec2_llama", 
+            "model_arch": "300m",   
+            "checkpoint": "https://dl.fbaipublicfiles.com/mms/omniASR-LLM-300M.pt",
+            "tokenizer": "https://dl.fbaipublicfiles.com/mms/omniASR_tokenizer.model",
+            "tokenizer_family": "char_tokenizer",
+        })
+
+    else:
+        print(f"invalid model: {model_id}")
+        return
+
     pipeline = ASRInferencePipeline(model_card=model_card, device=device, dtype=torch_dtype)
 
     sample_rate = 16000
@@ -157,14 +224,13 @@ def eval_omni_based(model_id, dataset):
 
     with open(model_csv_file, mode="w", encoding="utf-8", newline='') as fm:
         writer = csv.writer(fm)
-        writer.writerow(["idx", "out", "out_norm"])
+        writer.writerow(["idx", "out", "out_norm", "time_in_ms"])
 
         start_event = torch.cuda.Event(enable_timing=True)
         end_event = torch.cuda.Event(enable_timing=True)
         
         for i in tqdm(range(len(dataset))):
             try:
-                print("------------", dataset[i]["audio"])
                 audio_array = dataset[i]["audio"]["array"]
                 buf = io.BytesIO()
                 sf.write(buf, audio_array, sample_rate, format='WAV')
@@ -221,6 +287,14 @@ def eval():
     eval_whisper_based("sidleal/whisper-tarsila-asr-large3-v1-450k", dataset)
 
     eval_omni_based("sidleal/omniASR_LLM_300M_Tarsila_4k", dataset)
+    eval_omni_based("sidleal/omniASR_LLM_300M_Tarsila_9k", dataset)
+    eval_omni_based("sidleal/omniASR_LLM_1B_Tarsila_4k", dataset)
+    eval_omni_based("sidleal/omniASR_LLM_1B_Tarsila_9k", dataset)
+    eval_omni_based("sidleal/omniASR_LLM_1B_Tarsila_15k", dataset)
+
+    eval_omni_based("facebookresearch/omniASR_LLM_300M", dataset)
+    eval_omni_based("facebookresearch/omniASR_LLM_1B", dataset)
+    eval_omni_based("facebookresearch/omniASR_LLM_7B", dataset)
 
     # i = 0
     # with open(index_file, 'r') as f:

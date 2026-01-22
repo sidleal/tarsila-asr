@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "datasets==4.5.0",
+    "jiwer>=4.0.0",
     "omnilingual-asr==0.2.0",
     "soundfile==0.13.1",
     "torch==2.8",

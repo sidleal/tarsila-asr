@@ -11,6 +11,8 @@ import io
 import soundfile as sf
 import numpy as np
 from contextlib import ExitStack
+import jiwer
+import jiwer.transforms as tr
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
@@ -325,6 +327,52 @@ def merge_results(index_file):
     return merged_csv_file
 
 
+cer_transform = tr.Compose(
+    [
+        jiwer.ToLowerCase(),
+        jiwer.RemoveMultipleSpaces(),
+        jiwer.Strip(),
+        jiwer.ReduceToListOfListOfChars(),
+    ]
+)
+
+wer_transform = jiwer.Compose([
+    jiwer.ToLowerCase(),
+    jiwer.RemoveMultipleSpaces(),
+    jiwer.Strip(),
+    jiwer.ReduceToListOfListOfWords(),
+])
+
+def compute_cer(reference, hypothesis):
+    reference = reference.lower()
+    hypothesis = hypothesis.lower()
+    cer = jiwer.wer(reference, hypothesis, reference_transform=cer_transform, hypothesis_transform=cer_transform)
+    return cer
+
+def compute_wer(reference, hypothesis):
+    reference = reference.lower()
+    hypothesis = hypothesis.lower()
+    wer = jiwer.wer(reference, hypothesis, reference_transform=wer_transform, hypothesis_transform=wer_transform)    
+    return wer
+
+def calculate_wer_cer(reference, hypothesis):
+    if reference.strip() == '' or hypothesis.strip() == '':
+        return 1, 1
+    wer = compute_wer(reference, hypothesis)
+    cer = compute_cer(reference, hypothesis)
+    if wer > 1:
+        wer = 1
+    if cer > 1:
+        cer = 1
+    return wer, cer
+
+def calculate_rtf(duration_in_s, time_in_ms):
+    if duration_in_s <= 0 or time_in_ms <= 0:
+        return -1
+    time_in_s = time_in_ms / 1000 
+    rtf = time_in_s / duration_in_s
+    return rtf
+
 def calc_metrics(merged_file):
     print("calc wer cer rtf...")
     metrics_csv_file = "tarsila-asr-results-merged-metrics.csv"
@@ -345,13 +393,14 @@ def calc_metrics(merged_file):
             writer.writeheader()
 
             for row in reader:
-                new_row = row.copy()
-                
+                new_row = row.copy()                
                 for m in model_list:
                     model_name = m.split("__")[1]
-                    new_row[f"{model_name}_wer"] = 0
-                    new_row[f"{model_name}_cer"] = 0
-                    new_row[f"{model_name}_rtf"] = row.get('time_in_ms', '-1')
+                    wer, cer = calculate_wer_cer(row.get('ref_norm', ''), row.get(f"{model_name}_out_norm", ''))
+                    new_row[f"{model_name}_wer"] = round(wer,5)
+                    new_row[f"{model_name}_cer"] = round(cer,5)
+                    rtf = calculate_rtf(float(row.get('duration', 0)), float(row.get(f"{model_name}_time_in_ms", 0)))
+                    new_row[f"{model_name}_rtf"] = round(rtf, 5)
                 
                 writer.writerow(new_row)
 

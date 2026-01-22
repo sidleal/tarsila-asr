@@ -5,7 +5,11 @@ import re
 import os
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 import torch
-from fairseq2.assets import AssetCard
+# from fairseq2.assets import AssetCard
+# from omnilingual_asr.models.inference.pipeline import ASRInferencePipeline
+# import io
+# import soundfile as sf
+# import numpy as np
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
@@ -69,14 +73,14 @@ def save_index_file(index_file, dataset):
 
 def eval_whisper_based(model_id, dataset):
     print(f"eval whisper based model: {model_id}...")
-    model_csv_file = f"{model_id}".replace("/", "__")
+    model_csv_file = f"{model_id}.csv".replace("/", "__")
     exists = os.path.isfile(model_csv_file)
     if exists:
         print("skipping...")
         return
 
     model = AutoModelForSpeechSeq2Seq.from_pretrained(
-        model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True, use_safetensors=True
+        model_id, dtype=torch_dtype, low_cpu_mem_usage=True, use_safetensors=True
     )
     model.to(device)
 
@@ -128,21 +132,71 @@ def eval_whisper_based(model_id, dataset):
     return
 
 
-def eval_omni_based(model_id, dataset):
-    print(f"eval whisper based model: {model_id}...")
-    model_csv_file = f"{model_id}".replace("/", "__")
-    exists = os.path.isfile(model_csv_file)
-    if exists:
-        print("skipping...")
-        return
+# def eval_omni_based(model_id, dataset):
+#     print(f"eval whisper based model: {model_id}...")
+#     model_csv_file = f"{model_id}.csv".replace("/", "__")
+#     exists = os.path.isfile(model_csv_file)
+#     if exists:
+#         print("skipping...")
+#         return
 
-    model_300M_4k = AssetCard("omniASR_LLM_300M_Tarsila_4k", {
-        "model_family": "wav2vec2_llama",  
-        "model_arch": "300m",   
-        "checkpoint": "file:///home/jovyan/omnilingual-asr/output/ws_1.96866555/checkpoints/step_4000/model/pp_00/tp_00/sdp_00.pt",
-        "tokenizer": "https://dl.fbaipublicfiles.com/mms/omniASR_tokenizer.model",
-        "tokenizer_family": "char_tokenizer",
-    })
+#     model_card = ''
+#     if model_id == "sidleal/omniASR_LLM_300M_Tarsila_4k":
+#         model_card = AssetCard("omniASR_LLM_300M_Tarsila_4k", {
+#             "model_family": "wav2vec2_llama", 
+#             "model_arch": "300m",   
+#             "checkpoint": "https://huggingface.co/sidleal/omniASR_LLM_300M_Tarsila_4k/blob/main/sdp_00.pt",
+#             "tokenizer": "https://dl.fbaipublicfiles.com/mms/omniASR_tokenizer.model",
+#             "tokenizer_family": "char_tokenizer",
+#         })
+    
+#     pipeline = ASRInferencePipeline(model_card=model_card, device=device, dtype=torch_dtype)
+
+#     sample_rate = 16000
+#     lang = ["por_Latn"]
+
+#     with open(model_csv_file, mode="w", encoding="utf-8", newline='') as fm:
+#         writer = csv.writer(fm)
+#         writer.writerow(["idx", "out", "out_norm"])
+
+#         start_event = torch.cuda.Event(enable_timing=True)
+#         end_event = torch.cuda.Event(enable_timing=True)
+        
+#         for i in tqdm(range(len(dataset))):
+#             try:
+#                 print("------------", dataset[i]["audio"])
+#                 audio_array = dataset[i]["audio"]["array"]
+#                 buf = io.BytesIO()
+#                 sf.write(buf, audio_array, sample_rate, format='WAV')
+#                 buf.seek(0)
+#                 raw_uint8_data = np.frombuffer(buf.read(), dtype=np.uint8)                
+#                 audio_files = [raw_uint8_data]
+
+#                 start_event.record()
+#                 transcriptions = pipeline.transcribe(audio_files, lang=lang, batch_size=1)                
+#                 end_event.record()
+
+#                 torch.cuda.synchronize()
+#                 time_in_ms = start_event.elapsed_time(end_event)
+
+#                 out_text = transcriptions[0]
+#                 out_norm = replace_special_tokens_and_normalize(out_text)
+#                 writer.writerow([
+#                     i,
+#                     out_text,
+#                     out_norm,
+#                     round(time_in_ms, 2)
+#                 ])
+#             except Exception as e:
+#                 print(f"Skipping index {i} due to error: {e}")
+#                 writer.writerow([
+#                     i, 
+#                     "error", 
+#                     "error",
+#                     -1
+#                 ])
+#             break #=====================================
+
 
 def eval():
     print("loading dataset...")
@@ -155,16 +209,18 @@ def eval():
     save_index_file(index_file, dataset)
 
     eval_whisper_based("sidleal/distil-whisper-coraa-mupe-asr-2", dataset)
-    eval_whisper_based("sidleal/distil-whisper-tarsila-asr-v1-200k", dataset)
-    eval_whisper_based("sidleal/distil-whisper-tarsila-asr-v1-750k", dataset)
+    # eval_whisper_based("sidleal/distil-whisper-tarsila-asr-v1-200k", dataset)
+    # eval_whisper_based("sidleal/distil-whisper-tarsila-asr-v1-750k", dataset)
     
-    eval_whisper_based("openai/whisper-medium", dataset)
-    eval_whisper_based("openai/whisper-large-v3", dataset)
+    # eval_whisper_based("openai/whisper-medium", dataset)
+    # eval_whisper_based("openai/whisper-large-v3", dataset)
 
-    eval_whisper_based("sidleal/whisper-tarsila-asr-medium-v1-100k", dataset)
-    eval_whisper_based("sidleal/whisper-tarsila-asr-medium-v1-350k", dataset)
-    eval_whisper_based("sidleal/whisper-tarsila-asr-large3-v1-75k", dataset)
-    eval_whisper_based("sidleal/whisper-tarsila-asr-large3-v1-450k", dataset)
+    # eval_whisper_based("sidleal/whisper-tarsila-asr-medium-v1-100k", dataset)
+    # eval_whisper_based("sidleal/whisper-tarsila-asr-medium-v1-350k", dataset)
+    # eval_whisper_based("sidleal/whisper-tarsila-asr-large3-v1-75k", dataset)
+    # eval_whisper_based("sidleal/whisper-tarsila-asr-large3-v1-450k", dataset)
+
+    #eval_omni_based("sidleal/omniASR_LLM_300M_Tarsila_4k", dataset)
 
     # i = 0
     # with open(index_file, 'r') as f:
@@ -183,4 +239,8 @@ def eval():
 
 
 if __name__ == '__main__':
+    torch.cuda.empty_cache()
+    import os
+    os.environ["OMP_NUM_THREADS"] = "1"
+    os.environ["MKL_NUM_THREADS"] = "1"
     eval()

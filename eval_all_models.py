@@ -128,7 +128,6 @@ def eval_whisper_based(model_id, dataset):
                     "error",
                     -1
                 ])
-            break #=====================================
     return
 
 
@@ -209,16 +208,16 @@ def eval():
     save_index_file(index_file, dataset)
 
     eval_whisper_based("sidleal/distil-whisper-coraa-mupe-asr-2", dataset)
-    # eval_whisper_based("sidleal/distil-whisper-tarsila-asr-v1-200k", dataset)
-    # eval_whisper_based("sidleal/distil-whisper-tarsila-asr-v1-750k", dataset)
+    eval_whisper_based("sidleal/distil-whisper-tarsila-asr-v1-200k", dataset)
+    eval_whisper_based("sidleal/distil-whisper-tarsila-asr-v1-750k", dataset)
     
-    # eval_whisper_based("openai/whisper-medium", dataset)
-    # eval_whisper_based("openai/whisper-large-v3", dataset)
+    eval_whisper_based("openai/whisper-medium", dataset)
+    eval_whisper_based("openai/whisper-large-v3", dataset)
 
-    # eval_whisper_based("sidleal/whisper-tarsila-asr-medium-v1-100k", dataset)
-    # eval_whisper_based("sidleal/whisper-tarsila-asr-medium-v1-350k", dataset)
-    # eval_whisper_based("sidleal/whisper-tarsila-asr-large3-v1-75k", dataset)
-    # eval_whisper_based("sidleal/whisper-tarsila-asr-large3-v1-450k", dataset)
+    eval_whisper_based("sidleal/whisper-tarsila-asr-medium-v1-100k", dataset)
+    eval_whisper_based("sidleal/whisper-tarsila-asr-medium-v1-350k", dataset)
+    eval_whisper_based("sidleal/whisper-tarsila-asr-large3-v1-75k", dataset)
+    eval_whisper_based("sidleal/whisper-tarsila-asr-large3-v1-450k", dataset)
 
     #eval_omni_based("sidleal/omniASR_LLM_300M_Tarsila_4k", dataset)
 
@@ -239,8 +238,4 @@ def eval():
 
 
 if __name__ == '__main__':
-    torch.cuda.empty_cache()
-    import os
-    os.environ["OMP_NUM_THREADS"] = "1"
-    os.environ["MKL_NUM_THREADS"] = "1"
     eval()

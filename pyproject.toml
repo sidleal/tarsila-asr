@@ -6,7 +6,9 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "datasets==4.5.0",
-    "torch==2.9",
-    "torchcodec==0.9.1",
+    "omnilingual-asr==0.2.0",
+    "soundfile==0.13.1",
+    "torch==2.8",
+    "torchcodec==0.7",
     "transformers==4.57.6",
 ]

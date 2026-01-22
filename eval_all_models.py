@@ -151,8 +151,6 @@ def eval_whisper_based(model_id, dataset):
                     "error",
                     -1
                 ])
-            if i > 5:
-                break
     return
 
 
@@ -285,8 +283,6 @@ def eval_omni_based(model_id, dataset):
                     "error",
                     -1
                 ])
-            if i > 5:
-                break #=====================================
 
 
 def merge_results(index_file):

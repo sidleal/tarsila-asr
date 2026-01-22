@@ -10,9 +10,30 @@ from omnilingual_asr.models.inference.pipeline import ASRInferencePipeline
 import io
 import soundfile as sf
 import numpy as np
+from contextlib import ExitStack
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+
+model_list = [
+    "facebookresearch__omniASR_LLM_1B",
+    "facebookresearch__omniASR_LLM_300M",
+    "openai__whisper-large-v3",
+    "openai__whisper-medium",
+    "sidleal__distil-whisper-coraa-mupe-asr-2",
+    "sidleal__distil-whisper-tarsila-asr-v1-200k",
+    "sidleal__distil-whisper-tarsila-asr-v1-750k",
+    "sidleal__omniASR_LLM_1B_Tarsila_15k",
+    "sidleal__omniASR_LLM_1B_Tarsila_4k",
+    "sidleal__omniASR_LLM_1B_Tarsila_9k",
+    "sidleal__omniASR_LLM_300M_Tarsila_4k",
+    "sidleal__omniASR_LLM_300M_Tarsila_9k",
+    "sidleal__whisper-tarsila-asr-large3-v1-450k",
+    "sidleal__whisper-tarsila-asr-large3-v1-75k",
+    "sidleal__whisper-tarsila-asr-medium-v1-100k",
+    "sidleal__whisper-tarsila-asr-medium-v1-350k",
+]
+
 
 alphabet = r"ABCDEFGHIJKLMNOPQRSTUVWXYZÇÃÀÁÂÊÉÍÓÔÕÚÛabcdefghijklmnopqrstuvwxyzçãàáâêéíóôõũúû1234567890%\-\n/\\ "
 
@@ -128,7 +149,8 @@ def eval_whisper_based(model_id, dataset):
                     "error",
                     -1
                 ])
-            break
+            if i > 5:
+                break
     return
 
 
@@ -261,7 +283,77 @@ def eval_omni_based(model_id, dataset):
                     "error",
                     -1
                 ])
-            break #=====================================
+            if i > 5:
+                break #=====================================
+
+
+def merge_results(index_file):
+    print("merging results...")
+    merged_csv_file = "tarsila-asr-results-merged.csv"
+    exists = os.path.isfile(merged_csv_file)
+    if exists:
+        return merged_csv_file
+
+    with ExitStack() as stack:
+        main_file = stack.enter_context(open(index_file, 'r', encoding='utf-8'))
+        model_files = [stack.enter_context(open(f"{m}.csv", 'r', encoding='utf-8')) for m in model_list]
+        out_file = stack.enter_context(open(merged_csv_file, 'w', encoding='utf-8', newline=''))
+
+        main_reader = csv.DictReader(main_file)
+        model_readers = [csv.DictReader(f) for f in model_files]
+        
+        base_headers = ["idx", "origin", "duration", "gender", "ref", "ref_norm"]
+        dynamic_headers = []
+        for m in model_list:
+            model_name = m.split("__")[1]
+            dynamic_headers.extend([f"{model_name}_out", f"{model_name}_out_norm", f"{model_name}_time_in_ms"])
+        
+        writer = csv.DictWriter(out_file, fieldnames=base_headers + dynamic_headers)
+        writer.writeheader()
+
+        for main_row, *model_rows in zip(main_reader, *model_readers):
+            new_row = main_row.copy()
+            
+            for i, m_row in enumerate(model_rows):
+                model_name = model_list[i].split("__")[1]
+                new_row[f"{model_name}_out"] = m_row.get('out', '')
+                new_row[f"{model_name}_out_norm"] = m_row.get('out_norm', '')
+                new_row[f"{model_name}_time_in_ms"] = m_row.get('time_in_ms', '')
+            
+            writer.writerow(new_row)
+
+    return merged_csv_file
+
+
+def calc_metrics(merged_file):
+    print("calc wer cer rtf...")
+    metrics_csv_file = "tarsila-asr-results-merged-metrics.csv"
+    exists = os.path.isfile(metrics_csv_file)
+    if exists:
+        return
+
+    with open(metrics_csv_file, mode="w", encoding="utf-8", newline='') as fm:
+        with open(merged_file, 'r') as f:
+            reader = csv.DictReader(f)
+
+            base_headers = reader.fieldnames
+            dynamic_headers = []
+            for m in model_list:
+                model_name = m.split("__")[1]
+                dynamic_headers.extend([f"{model_name}_wer", f"{model_name}_cer", f"{model_name}_rtf"])
+            writer = csv.DictWriter(fm, fieldnames=base_headers + dynamic_headers)
+            writer.writeheader()
+
+            for row in reader:
+                new_row = row.copy()
+                
+                for m in model_list:
+                    model_name = m.split("__")[1]
+                    new_row[f"{model_name}_wer"] = 0
+                    new_row[f"{model_name}_cer"] = 0
+                    new_row[f"{model_name}_rtf"] = row.get('time_in_ms', '-1')
+                
+                writer.writerow(new_row)
 
 
 def eval():
@@ -294,22 +386,11 @@ def eval():
 
     eval_omni_based("facebookresearch/omniASR_LLM_300M", dataset)
     eval_omni_based("facebookresearch/omniASR_LLM_1B", dataset)
-    eval_omni_based("facebookresearch/omniASR_LLM_7B", dataset)
+    #eval_omni_based("facebookresearch/omniASR_LLM_7B", dataset)
 
-    # i = 0
-    # with open(index_file, 'r') as f:
-    #     reader = csv.DictReader(f)
-    #     for row in reader:
-    #         print(row['ref'])
-    #         print(dataset[i]['text'])
-    #         print('-')
-    #         original = dataset[i]['text'].replace('\n', ' ')
-    #         ref = row['ref']
-    #         if ref != original:
-    #             print(i, row['origin'])
-    #             break
-    #         i+=1
-    
+    merged_file = merge_results(index_file)        
+
+    calc_metrics(merged_file)
 
 
 if __name__ == '__main__':

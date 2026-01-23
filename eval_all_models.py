@@ -356,10 +356,6 @@ def calculate_wer_cer(reference, hypothesis):
         return 1, 1
     wer = compute_wer(reference, hypothesis)
     cer = compute_cer(reference, hypothesis)
-    if wer > 1:
-        wer = 1
-    if cer > 1:
-        cer = 1
     return wer, cer
 
 def calculate_rtf(duration_in_s, time_in_ms):

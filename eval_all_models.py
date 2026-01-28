@@ -34,6 +34,7 @@ model_list = [
     "sidleal__whisper-tarsila-asr-large3-v1-75k",
     "sidleal__whisper-tarsila-asr-medium-v1-100k",
     "sidleal__whisper-tarsila-asr-medium-v1-350k",
+    "facebookresearch__omniASR_LLM_7B",
 ]
 
 

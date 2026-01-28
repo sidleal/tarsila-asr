@@ -5,9 +5,11 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "bert-score>=0.3.13",
     "datasets==4.5.0",
     "jiwer>=4.0.0",
     "omnilingual-asr==0.2.0",
+    "sentencepiece>=0.2.1",
     "soundfile==0.13.1",
     "torch==2.8",
     "torchcodec==0.7",

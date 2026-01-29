@@ -36,6 +36,9 @@ import traceback
 from transformers import logging
 logging.set_verbosity_error()
 
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+print(f"Using device: {device}")
+
 def get_model(model_type, num_layers, all_layers=None):
     model = AutoModel.from_pretrained(model_type)
     model.eval()
@@ -119,18 +122,19 @@ num_layers = 12
 
 tokenizer = get_tokenizer(model_type, use_fast=False)
 model = get_model(model_type, num_layers)
+model.to(device)
 
-def padding(arr, pad_token, dtype=torch.long):
+def padding(arr, pad_token, dtype=torch.long, device='cuda'):
     lens = torch.LongTensor([len(a) for a in arr])
     max_len = lens.max().item()
-    padded = torch.ones(len(arr), max_len, dtype=dtype) * pad_token
-    mask = torch.zeros(len(arr), max_len, dtype=torch.long)
+    padded = torch.ones(len(arr), max_len, dtype=dtype, device=device) * pad_token
+    mask = torch.zeros(len(arr), max_len, dtype=torch.long, device=device)
     for i, a in enumerate(arr):
-        padded[i, : lens[i]] = torch.tensor(a, dtype=dtype)
+        padded[i, : lens[i]] = torch.tensor(a, dtype=dtype, device=device)
         mask[i, : lens[i]] = 1
     return padded, lens, mask
 
-def collate_idf(arr, tokenizer, idf_dict, device="cuda:0"):
+def collate_idf(arr, tokenizer, idf_dict, device="cuda"):
     """
     Helper function that pads a list of sentences to hvae the same length and
     loads idf score for words in the sentences.
@@ -152,8 +156,8 @@ def collate_idf(arr, tokenizer, idf_dict, device="cuda:0"):
 
     pad_token = tokenizer.pad_token_id
 
-    padded, lens, mask = padding(arr, pad_token, dtype=torch.long)
-    padded_idf, _, _ = padding(idf_weights, 0, dtype=torch.float)
+    padded, lens, mask = padding(arr, pad_token, dtype=torch.long, device=device)
+    padded_idf, _, _ = padding(idf_weights, 0, dtype=torch.float, device=device)
 
     padded = padded.to(device=device)
     mask = mask.to(device=device)
@@ -177,7 +181,7 @@ def get_bert_embedding(
     tokenizer,
     idf_dict,
     batch_size=-1,
-    device="cuda:0",
+    device="cuda",
     all_layers=False,
 ):
     """
@@ -281,7 +285,7 @@ idf_dict[tokenizer.cls_token_id] = 0
 
 candidate = "smoke kills"
 reference = "smoking kills"
-device = 'cpu'
+device = 'cuda'
 
 hyp_embedding, masks, padded_idf = get_bert_embedding([candidate], model, tokenizer, idf_dict, device=device, all_layers=False)
 ref_embedding, masks, padded_idf = get_bert_embedding([reference], model, tokenizer, idf_dict, device=device, all_layers=False)
@@ -368,11 +372,11 @@ def editDP(s1, s2):
 def hit_values(ref_li,hyp_li):
     x=[]
     x=editDP(hyp_li,ref_li)
-    print(ref_li)
-    print(hyp_li)
+    #print(ref_li)
+    #print(hyp_li)
     aligned=x[::-1]
     aligned=''.join(map(str, aligned))
-    print(aligned)
+    #print(aligned)
     return aligned
 
 # Funtions to map the ground truth and hypothesis with the transformed ground truth
@@ -409,8 +413,8 @@ def sub_sentence_mapper1(ground_truth,aligned):
         index+=1
     split_ground_truth_v1.append(temp_str1)
     split_aligned_v1.append(temp_str2)
-    print(f'#{split_ground_truth_v1}')
-    print(f'#{split_aligned_v1}')
+    #print(f'#{split_ground_truth_v1}')
+    #print(f'#{split_aligned_v1}')
     return split_ground_truth_v1, len(split_ground_truth_v1)==len(split_aligned_v1)
 
 def sub_sentence_mapper2(ground_truth,aligned):
@@ -446,9 +450,9 @@ def sub_sentence_mapper2(ground_truth,aligned):
         index+=1
     split_ground_truth_v1.append(temp_str1)
     split_aligned_v1.append(temp_str2)
-    print(f'#{split_ground_truth_v1}')
-    print(f'#{split_aligned_v1}')
-    print(len(split_ground_truth_v1)==len(split_aligned_v1))
+    #print(f'#{split_ground_truth_v1}')
+    #print(f'#{split_aligned_v1}')
+    #print(len(split_ground_truth_v1)==len(split_aligned_v1))
     return split_ground_truth_v1, len(split_ground_truth_v1)==len(split_aligned_v1)
 
 # Funtion to compute (1 - match error rate)
@@ -493,7 +497,7 @@ def cos_sim(a,b):
   # print(a_norm.shape)
   # print(b_norm.shape)
   ss  =  torch.mm(a_norm, b_norm.transpose(0, 1)).item()
-  print(f'SS:{ss}')
+  #print(f'SS:{ss}')
   return ss
 
 # Function to get the embeeddings for each segment of aligned ground truth
@@ -508,16 +512,16 @@ def get_gt_embeddings_v1(ground_truth_v1,gt_embedding,gt_tokens):
     start=k+1
     while k<len(gt_tokens):
       word+=gt_tokens[k]
-      print(f'word:{word},ground_truth_v1[j]:{ground_truth_v1[j]}')
+      #print(f'word:{word},ground_truth_v1[j]:{ground_truth_v1[j]}')
       if word.strip()==ground_truth_v1[j].strip():
         test_gt.append(word)
         gt_embeddings_v1.append(torch.mean(gt_embedding[0][start:k+2],dim=0))
-        print((start,k+2))
+        #print((start,k+2))
         k+=1
         break
       k+=1
-  print(test_gt)
-  print(len(gt_embeddings_v1),len(ground_truth_v1))
+  #print(test_gt)
+  #print(len(gt_embeddings_v1),len(ground_truth_v1))
   return gt_embeddings_v1
 
 # Function to get the embeddings for each segment of aligned hypothesis
@@ -532,16 +536,16 @@ def get_hyp_embeddings_v1(aligned_v1,hyp_embedding,hyp_tokens):
     start=k+1
     while k<len(hyp_tokens):
       word+=hyp_tokens[k]
-      print(f'word:{word},aligned_v1[j]:{aligned_v1[j]}')
+      #print(f'word:{word},aligned_v1[j]:{aligned_v1[j]}')
       if word.strip()==aligned_v1[j].strip():
         test_hyp.append(word)
         hyp_embeddings_v1.append(torch.mean(hyp_embedding[0][start:k+2],dim=0))
-        print((start,k+2))
+        #print((start,k+2))
         k+=1
         break
       k+=1
-  print(test_hyp)
-  print(len(hyp_embeddings_v1),len(aligned_v1))
+  #print(test_hyp)
+  #print(len(hyp_embeddings_v1),len(aligned_v1))
   return hyp_embeddings_v1
 
 # Function to get generate semascore
@@ -553,10 +557,11 @@ def generate_sema_score(ground_truth,hypothesis):
   ground_truth_v1,aligned_v1,aligned,mer=mapped_sentence(ground_truth,hypothesis)
   gt_tokens = [tokenizer.decode([i]) for i in sent_encode(tokenizer, ground_truth)][1:-1]
   hyp_tokens = [tokenizer.decode([i]) for i in sent_encode(tokenizer, hypothesis)][1:-1]
-  print(ground_truth_v1)
-  print(gt_tokens)
-  print(aligned_v1)
-  print(hyp_tokens)
+  
+  #print(ground_truth_v1)
+  #print(gt_tokens)
+  #print(aligned_v1)
+  #print(hyp_tokens)
 
   gt_embeddings_v1=get_gt_embeddings_v1(ground_truth_v1,gt_embedding,gt_tokens)
   hyp_embeddings_v1=get_hyp_embeddings_v1(aligned_v1,hyp_embedding,hyp_tokens)
@@ -580,20 +585,20 @@ def generate_sema_score(ground_truth,hypothesis):
       ss_list.append(round(ss,4))
       importance_list.append(round(importance,4))
       multiplication_list.append(round(importance*ss,4))
-      print(f'{round(ss,4)}#{ground_truth_v1[j]}#{aligned_v1[j]}')
-      print(f'{round(importance,4)}#{ground_truth_v1[j]}#{ground_truth}')
+      #print(f'{round(ss,4)}#{ground_truth_v1[j]}#{aligned_v1[j]}')
+      #print(f'{round(importance,4)}#{ground_truth_v1[j]}#{ground_truth}')
   if average > 0:
       metric/=average
-  print(metric)
+  #print(metric)
   return (metric,ground_truth_v1,aligned_v1,aligned,ss_list,importance_list,multiplication_list,mer_list)
 
 # Function to generate BERTScore
 from bert_score import score
 def generate_bert_score_v1(ground_truth,hypothesis):
-    (P, R, F)= score([ground_truth], [hypothesis], lang="en",model_type='roberta-base',idf=False)
-    print(f"P={P.mean().item():.6f} R={R.mean().item():.6f} F={F.mean().item():.6f}")
+    (P, R, F)= score([ground_truth], [hypothesis], lang="en",model_type='roberta-base',idf=False, device=device)
+    #print(f"P={P.mean().item():.6f} R={R.mean().item():.6f} F={F.mean().item():.6f}")
     bert_score_v1 = F.mean().item()
-    print('Done with Bert_score_v1')
+    #print('Done with Bert_score_v1')
     return bert_score_v1
 
 # Function to generate BERTscore and SeMaScore
@@ -606,14 +611,14 @@ def generate_Scores(path):
         try:
           new_df = df.iloc[[i]].copy()
           for j in range(1):
-            print('i:',i)
+            #print('i:',i)
             exception_data={}
             ground_truth=df.loc[i,'original'].strip()
             ground_truth = re.sub(r'[^\w\s]', '', ground_truth)
             hypothesis=df.loc[i,'processed'+str(j)].strip()
             hypothesis = re.sub(r'[^\w\s]', '', hypothesis)
 
-            print(ground_truth,hypothesis)
+            #print(ground_truth,hypothesis)
 
             bert_score_v1=generate_bert_score_v1(ground_truth,hypothesis)
             sema_score=generate_sema_score(ground_truth,hypothesis)
@@ -629,13 +634,13 @@ def generate_Scores(path):
             new_df['multiplication_list'+str(j)]=str(sema_score[6])
             new_df['mea_list'+str(j)]=str(sema_score[7])
           saving_path=path[:path.rindex('/')]+'/DS2_outputs_ATIS_new_dataset_v2_with_results_with_wer_sema_score.csv'
-          print(saving_path)
-          print(ground_truth)
+          #print(saving_path)
+          #print(ground_truth)
           new_df.to_csv(saving_path,mode='a',index=False,header=(not os.path.exists(saving_path)))
 
         except Exception as e:
             traceback.print_tb(e.__traceback__)
-            print('try exception error')
+            #print('try exception error')
             exception_data['ground_truth'] = [ground_truth]
             exception_df=pd.DataFrame(exception_data)
             saving_path=path[:path.rindex('/')]+'/DS2_outputs_ATIS_new_dataset_v2_with_results_with_wer_mapped_score_with_exceptions.csv'
@@ -646,18 +651,33 @@ def generate_Scores(path):
 
 # Function to generate BERTscore and SeMaScore
 def calc_bestscore_semascore(ground_truth, hypothesis):
-    print(ground_truth,hypothesis)
+    #print(ground_truth,hypothesis)
 
-    bert_score_v1=generate_bert_score_v1(ground_truth,hypothesis)
+    #bert_score_v1=generate_bert_score_v1(ground_truth,hypothesis)
     sema_score=generate_sema_score(ground_truth,hypothesis)
 
-    print(bert_score_v1, sema_score)
+    #print(bert_score_v1, sema_score)
 
-    return bert_score_v1, sema_score[0]
+#    return bert_score_v1, sema_score[0]
+    return 0, sema_score[0]
 
 if __name__ == '__main__':
-    g = "o professor deu a matéria e selecionou dentro daquela matéria algumas questões que ele achou que cobririam a matéria ou que eram viáveis"
+    #g = "o professor deu a matéria e selecionou dentro daquela matéria algumas questões que ele achou que cobririam a matéria ou que eram viáveis"
     #h = "o professor deu a matéria e selecionou dentro daquela matéria algumas questões que ele achou que cobriria a matéria o que eram viáveis"
-    h = "comi muita rapadura"
+    #h = "comi muita rapadura"
+    
+    #g = "comi muitas mangas"
+    #h = "comi muitas frutas"
+    
+    #g = "o homem caçou um pato"
+    #h = "o homem caçou um mato"
+    #h = "o homem caçou um rato"
+    
+    #g = "nós voltamos à comparação com objetivos"
+    #h = "nós voltamos à comparação com objetivos"
+    #h = "nós voltamos à comparação com o objetivo"
+    g = "mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele"
+    h = "" #mas nós precisemos lembrar que o bom professor não é apenas aquele que consegue que aluna aprenda cognitivamente,mas nós precisemos lembrar que o bom professor não é apenas aquele que consegue que aluna aprenda cognitivamente,1193.6, Mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente.,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente,920.46, Mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente.,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente,573.83,Mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda positivamente. Ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda positivamente ele,159.08,Mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente. Ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele,170.89,Mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente. Ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele,173.9,mas nós precisamos lembrar que o bom professor não é apenas aquele que concede que o aluno aprenda cognitivamente ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que concede que o aluno aprenda cognitivamente ele,1220.81,mas nós precisamos lembrar que o bom professor não é apenas aquele que concegue que o aluno aprenda cognitivamente ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que concegue que o aluno aprenda cognitivamente ele,1186.28,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele,1229.38,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele,1161.33,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele,1219.77,"Mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente, ele tem",mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele tem,759.63,Mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente. Ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele,736.3,Mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue e que o aluno aprenda cognitivamente. Ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue e que o aluno aprenda cognitivamente ele,648.65,Mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente. Ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele,914.09
+
     bert, sema = calc_bestscore_semascore(g, h)
     print(bert, sema)

@@ -13,9 +13,13 @@ import numpy as np
 from contextlib import ExitStack
 import jiwer
 import jiwer.transforms as tr
+from semascore import calc_bestscore_semascore
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+
+#env = "h100"
+env = "rtx4070"
 
 model_list = [
     "facebookresearch__omniASR_LLM_1B",
@@ -33,10 +37,11 @@ model_list = [
     "sidleal__whisper-tarsila-asr-large3-v1-450k",
     "sidleal__whisper-tarsila-asr-large3-v1-75k",
     "sidleal__whisper-tarsila-asr-medium-v1-100k",
-    "sidleal__whisper-tarsila-asr-medium-v1-350k",
-    "facebookresearch__omniASR_LLM_7B",
+    "sidleal__whisper-tarsila-asr-medium-v1-350k",    
 ]
 
+if env == "h100":
+    model_list.append("facebookresearch__omniASR_LLM_7B")
 
 alphabet = r"ABCDEFGHIJKLMNOPQRSTUVWXYZÇÃÀÁÂÊÉÍÓÔÕÚÛabcdefghijklmnopqrstuvwxyzçãàáâêéíóôõũúû1234567890%\-\n/\\ "
 
@@ -75,7 +80,7 @@ def replace_special_tokens_and_normalize(text):
     return " ".join(new_words)
 
 
-def save_index_file(index_file, dataset):
+def save_index_file(index_file, dataset):    
     exists = os.path.isfile(index_file)
     if not exists:
         with open(index_file, mode="w", encoding="utf-8", newline='') as f:
@@ -98,6 +103,7 @@ def save_index_file(index_file, dataset):
 def eval_whisper_based(model_id, dataset):
     print(f"eval whisper based model: {model_id}...")
     model_csv_file = f"{model_id}.csv".replace("/", "__")
+    model_csv_file = f"{env}/{model_csv_file}"
     exists = os.path.isfile(model_csv_file)
     if exists:
         print("skipping...")
@@ -158,6 +164,7 @@ def eval_whisper_based(model_id, dataset):
 def eval_omni_based(model_id, dataset):
     print(f"eval whisper based model: {model_id}...")
     model_csv_file = f"{model_id}.csv".replace("/", "__")
+    model_csv_file = f"{env}/{model_csv_file}"
     exists = os.path.isfile(model_csv_file)
     if exists:
         print("skipping...")
@@ -288,14 +295,14 @@ def eval_omni_based(model_id, dataset):
 
 def merge_results(index_file):
     print("merging results...")
-    merged_csv_file = "tarsila-asr-results-merged.csv"
+    merged_csv_file = f"{env}/tarsila-asr-results-merged.csv"
     exists = os.path.isfile(merged_csv_file)
     if exists:
         return merged_csv_file
 
     with ExitStack() as stack:
         main_file = stack.enter_context(open(index_file, 'r', encoding='utf-8'))
-        model_files = [stack.enter_context(open(f"{m}.csv", 'r', encoding='utf-8')) for m in model_list]
+        model_files = [stack.enter_context(open(f"{env}/{m}.csv", 'r', encoding='utf-8')) for m in model_list]
         out_file = stack.enter_context(open(merged_csv_file, 'w', encoding='utf-8', newline=''))
 
         main_reader = csv.DictReader(main_file)
@@ -367,8 +374,8 @@ def calculate_rtf(duration_in_s, time_in_ms):
     return rtf
 
 def calc_metrics(merged_file):
-    print("calc wer cer rtf...")
-    metrics_csv_file = "tarsila-asr-results-merged-metrics.csv"
+    print("calc wer cer rtf bertscore semascore...")
+    metrics_csv_file = f"{env}/tarsila-asr-results-merged-metrics.csv"
     exists = os.path.isfile(metrics_csv_file)
     if exists:
         return
@@ -381,31 +388,37 @@ def calc_metrics(merged_file):
             dynamic_headers = []
             for m in model_list:
                 model_name = m.split("__")[1]
-                dynamic_headers.extend([f"{model_name}_wer", f"{model_name}_cer", f"{model_name}_rtf"])
+                dynamic_headers.extend([f"{model_name}_wer", f"{model_name}_cer", f"{model_name}_rtf", f"{model_name}_bert", f"{model_name}_sema"])
             writer = csv.DictWriter(fm, fieldnames=base_headers + dynamic_headers)
             writer.writeheader()
 
-            for row in reader:
-                new_row = row.copy()                
+            for row in tqdm(reader):
+                new_row = row.copy()
                 for m in model_list:
                     model_name = m.split("__")[1]
-                    wer, cer = calculate_wer_cer(row.get('ref_norm', ''), row.get(f"{model_name}_out_norm", ''))
+                    ground_truth = row.get('ref_norm', '')
+                    hyphotesis = row.get(f"{model_name}_out_norm", '')
+                    wer, cer = calculate_wer_cer(ground_truth, hyphotesis)
                     new_row[f"{model_name}_wer"] = round(wer,5)
                     new_row[f"{model_name}_cer"] = round(cer,5)
                     rtf = calculate_rtf(float(row.get('duration', 0)), float(row.get(f"{model_name}_time_in_ms", 0)))
                     new_row[f"{model_name}_rtf"] = round(rtf, 5)
-                
+                    bertscore, semascore = calc_bestscore_semascore(ground_truth, hyphotesis)
+                    new_row[f"{model_name}_bert"] = round(bertscore,5)
+                    new_row[f"{model_name}_sema"] = round(semascore,5)
+
                 writer.writerow(new_row)
 
 
 def eval():
+
     print("loading dataset...")
     dataset_id = "sidleal/TARSILA-ASR-TST"
     dataset = load_dataset(dataset_id)['test']
     print(dataset)
 
     print("saving index file...")
-    index_file = "tarsila-asr-index.csv"
+    index_file = f"{env}/tarsila-asr-index.csv"
     save_index_file(index_file, dataset)
 
     eval_whisper_based("sidleal/distil-whisper-coraa-mupe-asr-2", dataset)
@@ -428,9 +441,11 @@ def eval():
 
     eval_omni_based("facebookresearch/omniASR_LLM_300M", dataset)
     eval_omni_based("facebookresearch/omniASR_LLM_1B", dataset)
-    #eval_omni_based("facebookresearch/omniASR_LLM_7B", dataset)
 
-    merged_file = merge_results(index_file)        
+    if env == "h100":
+        eval_omni_based("facebookresearch/omniASR_LLM_7B", dataset)
+
+    merged_file = merge_results(index_file)
 
     calc_metrics(merged_file)
 

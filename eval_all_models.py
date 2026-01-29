@@ -380,6 +380,8 @@ def calc_metrics(merged_file):
     if exists:
         return
 
+    BATCH_SIZE = 24
+
     with open(metrics_csv_file, mode="w", encoding="utf-8", newline='') as fm:
         with open(merged_file, 'r') as f:
             reader = csv.DictReader(f)
@@ -392,22 +394,51 @@ def calc_metrics(merged_file):
             writer = csv.DictWriter(fm, fieldnames=base_headers + dynamic_headers)
             writer.writeheader()
 
-            for row in tqdm(reader):
-                new_row = row.copy()
+            reader_list = list(reader)
+
+            for i in tqdm(range(0, len(reader_list), BATCH_SIZE)):
+                batch = reader_list[i : i + BATCH_SIZE]
                 for m in model_list:
                     model_name = m.split("__")[1]
-                    ground_truth = row.get('ref_norm', '')
-                    hyphotesis = row.get(f"{model_name}_out_norm", '')
-                    wer, cer = calculate_wer_cer(ground_truth, hyphotesis)
-                    new_row[f"{model_name}_wer"] = round(wer,5)
-                    new_row[f"{model_name}_cer"] = round(cer,5)
-                    rtf = calculate_rtf(float(row.get('duration', 0)), float(row.get(f"{model_name}_time_in_ms", 0)))
-                    new_row[f"{model_name}_rtf"] = round(rtf, 5)
-                    bertscore, semascore = calc_bestscore_semascore(ground_truth, hyphotesis)
-                    new_row[f"{model_name}_bert"] = round(bertscore,5)
-                    new_row[f"{model_name}_sema"] = round(semascore,5)
+                                        
+                    batch_refs = [row.get('ref_norm', '') for row in batch]
+                    batch_hyps = [row.get(f"{model_name}_out_norm", '') for row in batch]
+                    
+                    bert_list, sema_list = calc_bestscore_semascore(batch_refs, batch_hyps)
 
-                writer.writerow(new_row)
+                    for idx, row in enumerate(batch):
+                        row[f"{model_name}_bert"] = round(bert_list[idx], 5)
+                        row[f"{model_name}_sema"] = round(sema_list[idx], 5)
+                        
+                        ground_truth = row.get('ref_norm', '')
+                        hyphotesis = row.get(f"{model_name}_out_norm", '')
+                        
+                        wer, cer = calculate_wer_cer(ground_truth, hyphotesis)
+                        row[f"{model_name}_wer"] = round(wer,5)
+                        row[f"{model_name}_cer"] = round(cer,5)
+
+                        rtf = calculate_rtf(float(row.get('duration', 0)), float(row.get(f"{model_name}_time_in_ms", 0)))
+                        row[f"{model_name}_rtf"] = round(rtf, 5)
+                    
+                for row in batch:
+                    writer.writerow(row)
+
+            # for row in tqdm(reader):
+            #     new_row = row.copy()
+            #     for m in model_list:
+            #         model_name = m.split("__")[1]
+            #         ground_truth = row.get('ref_norm', '')
+            #         hyphotesis = row.get(f"{model_name}_out_norm", '')
+            #         wer, cer = calculate_wer_cer(ground_truth, hyphotesis)
+            #         new_row[f"{model_name}_wer"] = round(wer,5)
+            #         new_row[f"{model_name}_cer"] = round(cer,5)
+            #         rtf = calculate_rtf(float(row.get('duration', 0)), float(row.get(f"{model_name}_time_in_ms", 0)))
+            #         new_row[f"{model_name}_rtf"] = round(rtf, 5)
+            #         bertscore, semascore = calc_bestscore_semascore(ground_truth, hyphotesis)
+            #         new_row[f"{model_name}_bert"] = round(bertscore,5)
+            #         new_row[f"{model_name}_sema"] = round(semascore,5)
+
+            #     writer.writerow(new_row)
 
 
 def eval():
@@ -452,3 +483,5 @@ def eval():
 
 if __name__ == '__main__':
     eval()
+    #ret = calculate_wer_cer("nós voltamos à comparação com objetivos", "nós não voltamos à comparação com objetivos")
+    #print(ret)

@@ -558,13 +558,20 @@ def generate_sema_score(ground_truth,hypothesis):
   gt_tokens = [tokenizer.decode([i]) for i in sent_encode(tokenizer, ground_truth)][1:-1]
   hyp_tokens = [tokenizer.decode([i]) for i in sent_encode(tokenizer, hypothesis)][1:-1]
   
-  #print(ground_truth_v1)
-  #print(gt_tokens)
-  #print(aligned_v1)
-  #print(hyp_tokens)
+#   print("ground_truth: ", ground_truth_v1)
+#   print("gt_tokens: ", gt_tokens)
+#   print("aligned_v1: ", aligned_v1)
+#   print("hyp_tokens: ",hyp_tokens)
 
   gt_embeddings_v1=get_gt_embeddings_v1(ground_truth_v1,gt_embedding,gt_tokens)
   hyp_embeddings_v1=get_hyp_embeddings_v1(aligned_v1,hyp_embedding,hyp_tokens)
+
+#   print(len(gt_tokens))
+#   print(len(hyp_tokens))
+
+#   print(len(gt_embeddings_v1))
+#   print(len(hyp_embeddings_v1))
+  
   total_gt_embedding=torch.mean(gt_embedding[0][1:-1],dim=0)
   ss_list=[]
   importance_list=[]
@@ -572,7 +579,12 @@ def generate_sema_score(ground_truth,hypothesis):
   mer_list=[]
   average=0
   metric=0
-  for j in range(len(gt_embeddings_v1)):
+  
+  max_list_size = len(gt_embeddings_v1)
+  if max_list_size > len(hyp_embeddings_v1):
+      max_list_size = len(hyp_embeddings_v1)
+
+  for j in range(max_list_size):
       mer_word=0
       importance = cos_sim(gt_embeddings_v1[j], total_gt_embedding)
       ss = cos_sim(gt_embeddings_v1[j], hyp_embeddings_v1[j])
@@ -594,12 +606,15 @@ def generate_sema_score(ground_truth,hypothesis):
 
 # Function to generate BERTScore
 from bert_score import score
-def generate_bert_score_v1(ground_truth,hypothesis):
-    (P, R, F)= score([ground_truth], [hypothesis], lang="en",model_type='roberta-base',idf=False, device=device)
+def generate_bert_score_v1(ground_truth_list,hypothesis_list):
+    (P, R, F)= score(ground_truth_list, hypothesis_list, lang="en",model_type='roberta-base',idf=False, device=device)
     #print(f"P={P.mean().item():.6f} R={R.mean().item():.6f} F={F.mean().item():.6f}")
-    bert_score_v1 = F.mean().item()
+    #bert_score_v1 = F.mean().item()
     #print('Done with Bert_score_v1')
-    return bert_score_v1
+    #return bert_score_v1
+    bert_scores_list = F.tolist()
+    #print(bert_scores_list)
+    return bert_scores_list
 
 # Function to generate BERTscore and SeMaScore
 def generate_Scores(path):
@@ -650,34 +665,70 @@ def generate_Scores(path):
 #generate_Scores(r'/content/DS2_outputs_ATIS_new_dataset_v2_with_results_with_wer.csv')
 
 # Function to generate BERTscore and SeMaScore
-def calc_bestscore_semascore(ground_truth, hypothesis):
+def calc_bestscore_semascore(ground_truth_list, hypothesis_list):
+    ret_bert = []
+    ret_sema = []
     #print(ground_truth,hypothesis)
-
+    
     #bert_score_v1=generate_bert_score_v1(ground_truth,hypothesis)
-    sema_score=generate_sema_score(ground_truth,hypothesis)
+    ret_bert=generate_bert_score_v1(ground_truth_list,hypothesis_list)
+    #for i in range(len(ground_truth_list)):
+    #    ret_bert.append(0.0)
+
+    for i in range(len(ground_truth_list)):
+        ground_truth = ground_truth_list[i]
+        hypothesis = hypothesis_list[i]
+        #print(ground_truth, " -> ", hypothesis)
+        #print("---")
+        if ground_truth == '' or hypothesis == '':
+            ret_sema.append(0.0)
+            continue
+        sema_score=generate_sema_score(ground_truth,hypothesis)
+        ret_sema.append(sema_score[0])
 
     #print(bert_score_v1, sema_score)
 
 #    return bert_score_v1, sema_score[0]
-    return 0, sema_score[0]
+    return ret_bert, ret_sema
 
 if __name__ == '__main__':
-    #g = "o professor deu a matéria e selecionou dentro daquela matéria algumas questões que ele achou que cobririam a matéria ou que eram viáveis"
-    #h = "o professor deu a matéria e selecionou dentro daquela matéria algumas questões que ele achou que cobriria a matéria o que eram viáveis"
-    #h = "comi muita rapadura"
+    g_list = []
+    h_list = []
+    g_list.append("o professor deu a matéria e selecionou dentro daquela matéria algumas questões que ele achou que cobririam a matéria ou que eram viáveis")
+    h_list.append("o professor deu a matéria e selecionou dentro daquela matéria algumas questões que ele achou que cobriria a matéria o que eram viáveis")
     
-    #g = "comi muitas mangas"
-    #h = "comi muitas frutas"
+    g_list.append("o professor deu a matéria e selecionou dentro daquela matéria algumas questões que ele achou que cobririam a matéria ou que eram viáveis")
+    h_list.append("comi muita rapadura")
     
-    #g = "o homem caçou um pato"
-    #h = "o homem caçou um mato"
-    #h = "o homem caçou um rato"
+    g_list.append("comi muitas mangas")
+    h_list.append("comi muitas frutas")
     
-    #g = "nós voltamos à comparação com objetivos"
-    #h = "nós voltamos à comparação com objetivos"
-    #h = "nós voltamos à comparação com o objetivo"
-    g = "mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele"
-    h = "" #mas nós precisemos lembrar que o bom professor não é apenas aquele que consegue que aluna aprenda cognitivamente,mas nós precisemos lembrar que o bom professor não é apenas aquele que consegue que aluna aprenda cognitivamente,1193.6, Mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente.,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente,920.46, Mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente.,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente,573.83,Mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda positivamente. Ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda positivamente ele,159.08,Mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente. Ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele,170.89,Mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente. Ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele,173.9,mas nós precisamos lembrar que o bom professor não é apenas aquele que concede que o aluno aprenda cognitivamente ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que concede que o aluno aprenda cognitivamente ele,1220.81,mas nós precisamos lembrar que o bom professor não é apenas aquele que concegue que o aluno aprenda cognitivamente ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que concegue que o aluno aprenda cognitivamente ele,1186.28,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele,1229.38,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele,1161.33,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele,1219.77,"Mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente, ele tem",mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele tem,759.63,Mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente. Ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele,736.3,Mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue e que o aluno aprenda cognitivamente. Ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue e que o aluno aprenda cognitivamente ele,648.65,Mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente. Ele,mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele,914.09
+    g_list.append("o homem caçou um pato")
+    h_list.append("o homem caçou um mato")
 
-    bert, sema = calc_bestscore_semascore(g, h)
-    print(bert, sema)
+    g_list.append("o homem caçou um pato")
+    h_list.append("o homem caçou um rato")
+    
+    g_list.append("o homem caçou um pato")
+    h_list.append("o homem caçou um fato")
+    
+    g_list.append("nós voltamos à comparação com objetivos")
+    h_list.append("nós voltamos à comparação com objetivos")
+
+    g_list.append("nós voltamos à comparação com objetivos")
+    h_list.append("nós voltamos à comparação com o objetivo")
+    
+    g_list.append("nós voltamos à comparação com objetivos")
+    h_list.append("nós não voltamos à comparação com objetivos")
+    
+    g_list.append("mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele")
+    h_list.append("")
+
+    g_list.append("mas nós precisamos lembrar que o bom professor não é apenas aquele que consegue que o aluno aprenda cognitivamente ele")
+    h_list.append("mas nós precisemos lembrar que o bom professor não é apenas aquele que consegue que aluna aprenda cognitivamente")
+
+    bert, sema = calc_bestscore_semascore(g_list, h_list)
+    for i in range(len(g_list)):
+        print(g_list[i], " -> ", h_list[i])
+        print(bert[i], sema[i])
+        print("---")

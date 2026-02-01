@@ -18,8 +18,8 @@ from semascore import calc_bestscore_semascore
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
-#env = "h100"
-env = "rtx4070"
+env = "h100"
+#env = "rtx4070"
 
 model_list = [
     "facebookresearch__omniASR_LLM_1B",
@@ -260,6 +260,10 @@ def eval_omni_based(model_id, dataset):
         end_event = torch.cuda.Event(enable_timing=True)
         
         for i in tqdm(range(len(dataset))):
+            
+            # if i < 60979:
+            #     continue
+
             try:
                 audio_array = dataset[i]["audio"]["array"]
                 buf = io.BytesIO()
@@ -397,6 +401,9 @@ def calc_metrics(merged_file):
             reader_list = list(reader)
 
             for i in tqdm(range(0, len(reader_list), BATCH_SIZE)):
+                # if i < 21090:
+                #     continue
+
                 batch = reader_list[i : i + BATCH_SIZE]
                 for m in model_list:
                     model_name = m.split("__")[1]
@@ -422,24 +429,6 @@ def calc_metrics(merged_file):
                     
                 for row in batch:
                     writer.writerow(row)
-
-            # for row in tqdm(reader):
-            #     new_row = row.copy()
-            #     for m in model_list:
-            #         model_name = m.split("__")[1]
-            #         ground_truth = row.get('ref_norm', '')
-            #         hyphotesis = row.get(f"{model_name}_out_norm", '')
-            #         wer, cer = calculate_wer_cer(ground_truth, hyphotesis)
-            #         new_row[f"{model_name}_wer"] = round(wer,5)
-            #         new_row[f"{model_name}_cer"] = round(cer,5)
-            #         rtf = calculate_rtf(float(row.get('duration', 0)), float(row.get(f"{model_name}_time_in_ms", 0)))
-            #         new_row[f"{model_name}_rtf"] = round(rtf, 5)
-            #         bertscore, semascore = calc_bestscore_semascore(ground_truth, hyphotesis)
-            #         new_row[f"{model_name}_bert"] = round(bertscore,5)
-            #         new_row[f"{model_name}_sema"] = round(semascore,5)
-
-            #     writer.writerow(new_row)
-
 
 def eval():
 

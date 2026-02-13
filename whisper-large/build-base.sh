@@ -1,0 +1,1 @@
+docker build -t distil-whisper-tarsila-base:0.6 -f Dockerfile.base .

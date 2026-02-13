@@ -1,0 +1,9 @@
+export HF_HOME=/home/jovyan/hf_cache
+export HF_DATASETS_CACHE=/home/jovyan/hf_cache/datasets
+export TRANSFORMERS_CACHE=/home/jovyan/hf_cache/models
+export TORCH_HOME=/home/jovyan/hf_cache
+export PYTHONUNBUFFERED=1
+export NCCL_P2P_DISABLE="1"
+export NCCL_IB_DISABLE="1"
+export NCCL_DEBUG="INFO"
+export CUDA_VISIBLE_DEVICES="0,1"

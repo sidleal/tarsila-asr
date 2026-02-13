@@ -1,0 +1,29 @@
+FROM pytorch/pytorch:2.7.1-cuda11.8-cudnn9-runtime
+
+RUN mkdir -p /opt/training/cache/datasets && \
+    mkdir -p /opt/training/cache/models
+
+ENV HF_HOME="/opt/training/cache" \
+    HF_DATASETS_CACHE="/opt/training/cache/datasets" \
+    #TRANSFORMERS_CACHE="/opt/training/cache/models" \
+    TORCH_HOME="/opt/training/cache"
+
+RUN apt-get update && apt-get install -y software-properties-common
+RUN add-apt-repository ppa:ubuntuhandbook1/ffmpeg7
+RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+    "accelerate" \
+    "datasets" \
+    "evaluate" \
+    "huggingface_hub" \
+    "jiwer" \
+    "librosa" \
+    "pandas" \
+    "scikit-learn" \
+    "soundfile" \
+    "transformers[torch]" \
+    "wandb" \
+    "torchcodec"
+

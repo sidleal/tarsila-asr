@@ -1,0 +1,1 @@
+docker build -t sidleal/distil-whisper-tarsila:$1 .

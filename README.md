@@ -10,6 +10,9 @@
 | h100 | Outputs for eval_all_models.py running in the H100 env.  |
 | rtx4070 | Outputs for eval_all_models.py running in the RTX 4070 env.  |
 
+## Huggingface Tarsila-ASR dataset:
+Link Omitted for blind review
+
 ## Huggingface Models checkpoints:
 | Name | link |
 | :--- | :--- |

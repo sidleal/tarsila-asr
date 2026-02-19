@@ -1,6 +1,8 @@
 # Tarsila-ASR: A Multi-Domain Test Suite for Benchmarking Brazilian Portuguese Speech Recognition
 ## Anonymous submission to Interspeech 2026
 
+<img width="1489" height="790" alt="tarsila_subsets_wer_rtf" src="https://github.com/user-attachments/assets/a04a65a0-eaa9-4718-8bad-c80ed0509604" />
+
 | Folder | Content |
 | :--- | :--- |
 | tarsila-asr-dataset | Scripts for building the train/dev/test subsets from public datasets. |

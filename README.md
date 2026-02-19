@@ -3,6 +3,8 @@
 
 <img width="1489" height="790" alt="tarsila_subsets_wer_rtf" src="https://github.com/user-attachments/assets/a04a65a0-eaa9-4718-8bad-c80ed0509604" />
 
+## Folders description
+
 | Folder | Content |
 | :--- | :--- |
 | tarsila-asr-dataset | Scripts for building the train/dev/test subsets from public datasets. |

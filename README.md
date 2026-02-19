@@ -2,6 +2,7 @@
 ## Anonymous submission to Interspeech 2026
 
 ## Best Models WER vs RTF
+This plot shows the Word Error Rate values as bars for each of our three primary models, and also the Real Time Factor values as lines. Although the best WER is achieved with the fine-tuned Whisper-Large, DistilWhisper provides the best tradeoff between accuracy and efficiency.
 <img width="1489" height="790" alt="image" src="https://github.com/user-attachments/assets/bce2808a-91b0-4e58-a1d5-963d2c4c976a" />
 
 ## Folders description

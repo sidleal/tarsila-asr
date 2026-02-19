@@ -36,4 +36,4 @@ Link Omitted for blind review
 | whisper-tarsila-asr-medium-v1-350k | Omitted for blind review |
 
 ## Gender analysis
-<img width="1480"  alt="tarsila_subsets_gender_wer" src="https://github.com/user-attachments/assets/b31d3a56-f7f4-4b55-9e08-59f82ce9993a" />
+<img width="1480"  alt="tarsila_subsets_gender_wer" src="tarsila_subsets_gender_wer.png" />

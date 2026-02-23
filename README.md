@@ -23,17 +23,17 @@ Link Omitted for blind review
 ## Huggingface Models checkpoints:
 | Name | link |
 | :--- | :--- |
-| distil-whisper-tarsila-asr-v1-200k | Omitted for blind review |
-| distil-whisper-tarsila-asr-v1-750k | Omitted for blind review |
-| omniASR_LLM_1B_Tarsila_15k | Omitted for blind review |
-| omniASR_LLM_1B_Tarsila_4k | Omitted for blind review |
-| omniASR_LLM_1B_Tarsila_9k | Omitted for blind review |
-| omniASR_LLM_300M_Tarsila_4k | Omitted for blind review |
-| omniASR_LLM_300M_Tarsila_9k | Omitted for blind review |
-| whisper-tarsila-asr-large3-v1-450k | Omitted for blind review |
-| whisper-tarsila-asr-large3-v1-75k | Omitted for blind review |
-| whisper-tarsila-asr-medium-v1-100k | Omitted for blind review |
-| whisper-tarsila-asr-medium-v1-350k | Omitted for blind review |
+| distil-whisper-ft-asr-200k | Omitted for blind review |
+| distil-whisper-ft-asr-750k | Omitted for blind review |
+| omniASR_LLM_1B_ft_15k | Omitted for blind review |
+| omniASR_LLM_1B_ft_4k | Omitted for blind review |
+| omniASR_LLM_1B_ft_9k | Omitted for blind review |
+| omniASR_LLM_300M_ft_4k | Omitted for blind review |
+| omniASR_LLM_300M_ft_9k | Omitted for blind review |
+| whisper-ft-large3-v1-450k | Omitted for blind review |
+| whisper-ft-large3-v1-75k | Omitted for blind review |
+| whisper-ft-medium-v1-100k | Omitted for blind review |
+| whisper-ft-medium-v1-350k | Omitted for blind review |
 
 ## Gender analysis
 <img width="1480"  alt="tarsila_subsets_gender_wer" src="tarsila_subsets_gender_wer.png" />

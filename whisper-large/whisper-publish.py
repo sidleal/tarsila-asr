@@ -14,7 +14,7 @@ fine_tuned_model_name = "whisper-tarsila-asr-large3-v1-450k"
 hf_token = "xxxx"
 dataset_link = "sidleal/TARSILA-ASR-V1"
 
-os.environ["WANDB_API_KEY"] = "f7421cf9b7e382afe518530290443943f1a2543a" 
+os.environ["WANDB_API_KEY"] = "xxxxxxxxx" 
 os.environ["WANDB_PROJECT"] = "tarsila-asr-whisper-medium"
 os.environ["WANDB_RUN_NAME"] = f"tarsila-asr-whisper-run-1ab"
 wandb.init(project="tarsila-asr-whisper-medium", name=f"tarsila-asr-whisper-run-1ab")

@@ -29,22 +29,22 @@ This plot shows the Word Error Rate values as bars for each of our three primary
 | rtx4070 | Outputs for eval_all_models.py running in the RTX 4070 env.  |
 
 ## Huggingface Tarsila-ASR dataset:
-Link Omitted for blind review
+[https://huggingface.co/datasets/nilc-nlp/TARSILA-ASR]
 
 ## Huggingface Models checkpoints:
 | Name | link |
 | :--- | :--- |
-| distil-whisper-ft-asr-200k | Omitted for blind review |
-| distil-whisper-ft-asr-750k | Omitted for blind review |
-| omniASR_LLM_1B_ft_15k | Omitted for blind review |
-| omniASR_LLM_1B_ft_4k | Omitted for blind review |
-| omniASR_LLM_1B_ft_9k | Omitted for blind review |
-| omniASR_LLM_300M_ft_4k | Omitted for blind review |
-| omniASR_LLM_300M_ft_9k | Omitted for blind review |
-| whisper-ft-large3-v1-450k | Omitted for blind review |
-| whisper-ft-large3-v1-75k | Omitted for blind review |
-| whisper-ft-medium-v1-100k | Omitted for blind review |
-| whisper-ft-medium-v1-350k | Omitted for blind review |
+| distil-whisper-ft-asr-200k | [https://huggingface.co/sidleal/distil-whisper-tarsila-asr-v1-200k] |
+| distil-whisper-ft-asr-750k | [https://huggingface.co/sidleal/distil-whisper-tarsila-asr-v1-750k] |
+| omniASR_LLM_1B_ft_15k | [https://huggingface.co/sidleal/omniASR_LLM_1B_Tarsila_15k] |
+| omniASR_LLM_1B_ft_4k | [https://huggingface.co/sidleal/omniASR_LLM_1B_Tarsila_4k] |
+| omniASR_LLM_1B_ft_9k | [https://huggingface.co/sidleal/omniASR_LLM_1B_Tarsila_9k] |
+| omniASR_LLM_300M_ft_4k | [https://huggingface.co/sidleal/omniASR_LLM_300M_Tarsila_4k] |
+| omniASR_LLM_300M_ft_9k | [https://huggingface.co/sidleal/omniASR_LLM_300M_Tarsila_9k] |
+| whisper-ft-large3-v1-450k | [https://huggingface.co/sidleal/whisper-tarsila-asr-large3-v1-450k] |
+| whisper-ft-large3-v1-75k | [https://huggingface.co/sidleal/whisper-tarsila-asr-large3-v1-75k] |
+| whisper-ft-medium-v1-100k | [https://huggingface.co/sidleal/whisper-tarsila-asr-medium-v1-100k] |
+| whisper-ft-medium-v1-350k | [https://huggingface.co/sidleal/whisper-tarsila-asr-medium-v1-350k] |
 
 ## Gender analysis
 <img width="1480"  alt="tarsila_subsets_gender_wer" src="tarsila_subsets_gender_wer.png" />

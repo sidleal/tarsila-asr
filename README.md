@@ -1,5 +1,16 @@
 # Tarsila-ASR: A Multi-Domain Test Suite for Benchmarking Brazilian Portuguese Speech Recognition
-## Anonymous submission to Interspeech 2026
+## Test Dataset Link: [https://huggingface.co/datasets/nilc-nlp/TARSILA-ASR]
+
+Citing this work:
+-----------------
+````
+@article{TarsilaASR2026,
+    author = {Sidney Evaldo Leal and Ariadne Matos and Edresson Casanova and Frederico Gonçalves and Renato Moraes Silva and Arnaldo Candido Jr and Sandra Maria Aluísio},
+    title = {Tarsila-ASR: A Multi-Domain Test Suite for Benchmarking Brazilian Portuguese Speech Recognition},
+    journal = {Proceedings of Interspeech 2026},
+    year = {2026}
+}
+````
 
 ## Best Models WER vs RTF
 This plot shows the Word Error Rate values as bars for each of our three primary models, and also the Real Time Factor values as lines. Although the best WER is achieved with the fine-tuned Whisper-Large, DistilWhisper provides the best tradeoff between accuracy and efficiency.
